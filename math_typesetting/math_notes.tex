@@ -1,0 +1,42 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\usepackage[BoldFont, SlantFont, CJKnumber]{xeCJK}
+\setCJKmainfont[BoldFont=Adobe Heiti Std R]{Adobe Song Std L}
+\setCJKsansfont[BoldFont=Adobe Heiti Std R]{Adobe Kaiti Std R}
+\setCJKmonofont{Adobe Fangsong Std R}
+\XeTeXlinebreaklocale "zh" 
+\XeTeXlinebreakskip = 0pt plus 1pt minus 0.1pt
+
+% 数学公式相关
+\usepackage{amsmath, bm}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\boldvec}[1]{\bm{#1}}
+
+\begin{document}
+
+\section{杂项}
+
+\subsection{如何插入代码}
+
+可以用宏包verbatim插入代码，当然啦，也包括LaTeX源代码，这样就可以在pdf中显示LaTeX命令了。和数学公式类似，分为inline模式和display模式：
+
+inline模式1：\verb!\verb|\section是一个LaTeX命令|!
+
+inline模式2：\verb|\verb!\section是一个LaTeX命令!|
+
+display模式:\\
+\verb|\begin{verbatim}\section是一个LaTeX命令\end{verbatim}|
+
+\section{数学公式}
+
+\subsection{所谓的math mode}
+
+有两种math mode，分别是夹杂在正常文字中间出现的in-line模式，和单独出现一行的stand-alone模式。\\
+\TeX 风格的in-line模式：$ a + b = c $
+\LaTeX 风格的in-line模式：\( a + b = c \)
+\LaTeX 风格的in-line模式：\begin{math} a + b = c \end{math}
+stand-alone模式：
+stand-alone模式：
+stand-alone模式：
+
+\end{document}
