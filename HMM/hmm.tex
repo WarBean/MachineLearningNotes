@@ -1,14 +1,16 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage{fontspec}
 \usepackage[BoldFont, SlantFont, CJKnumber]{xeCJK}
-\usepackage{amsmath}
 \setCJKmainfont[BoldFont=Adobe Heiti Std R]{Adobe Song Std L}
 \setCJKsansfont[BoldFont=Adobe Heiti Std R]{Adobe Kaiti Std R}
 \setCJKmonofont{Adobe Fangsong Std R}
 \XeTeXlinebreaklocale "zh" 
 \XeTeXlinebreakskip = 0pt plus 1pt minus 0.1pt
 
+% 数学公式相关
+\usepackage{amsmath, bm}
 \DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\boldvec}[1]{\bm{#1}}
 
 \begin{document} 
 
@@ -53,7 +55,7 @@ $$ \lambda = (A, B, \pi) $$
 \end{itemize}
 第一个问题属于用模型进行评估（evaluation）的问题，第二个问题属于用模型和数据进行推断（inference）的问题\textbf{（我瞎猜的）}，第三个问题属于对模型进行参数优化（parameter optimization）的问题。。
 
-\subsubsection{第一个问题：Brute-Force算法}
+\subsubsection{第一个问题：暴力算法}
 
 现在，有了模型参数$\lambda$，有了观察序列$o=o_1 o_2 ... o_T$，我们可以先假设知道状态序列$s=s_1 s_2 ... s_T$，可以容易写出条件概率$P(o | s, \lambda)$和$P(s | \lambda)$，由这两个条件概率可以写出$P(o, s | \lambda)$：
 \begin{equation}\begin{split}
@@ -84,11 +86,11 @@ P(o | \lambda)
 & = \sum_s P(o, s | \lambda)\\
 & = \sum_{s_1, s_2, ... s_T} \pi(s_1) B(s_1, o_1) A(s_1, s_2) B(s_2, o_2) ... A(s_{T - 1}, s_T) B(s_T, o_T)
 \end{split}\end{equation}
-分析这个运算的复杂度：总共需要进行$O(N^T)$规模的求和，每个求和需要做$O(2T)$规模的乘积，总的复杂度是$O(2TN^T)$，这显然是不行的。
+分析这个运算的复杂度：总共需要进行$O(N^T)$规模的求和，每个求和需要做$O(T)$规模的乘积，总的复杂度是$O(TN^T)$，这显然是不行的。
 
 \subsubsection{第一个问题：sum-product算法}
 
-观察式子（？？？），注意到它做了很多重复计算，例如$\pi(s_1)$跟$s_2$无关，却要在$s_2$上求和时重复地计算，更不要说后面的$s_3,s_4...$了，所以先想办法用乘法分配律先提出共同的因子。可以从$s_1$开始，从前到后：
+观察式子（？？？），注意到它做了很多重复计算，例如$\pi(s_1)$跟$s_2$无关，却要在$s_2$上求和时重复地计算，更不要说后面的$s_3,s_4...$了，所以先想办法用乘法分配律先提出共同的因子。先尝试从从$s_1$开始，从前到后：
 \begin{equation}\begin{split}
 P(o | \lambda)
 & = \sum_{s_2, ... s_T} ... \sum_{s_1} \pi(s_1) B(s_1, o_1) A(s_1, s_2)\\
@@ -96,6 +98,25 @@ P(o | \lambda)
 & = ...\\
 & = \sum_{s_T} B(s_T, o_T) \sum_{s_{T - 1}} A(s_{T - 1}, s_T) B(s_{T - 1}, o_{T - 1}) ... \sum_{s_1} A(s_1, s_2) B(s_1, o_1) \pi(s_1) 
 \end{split}\end{equation}
+似乎复杂度降低了不少，但是这个式子在算法实现的角度上不好算，进一步观察发现它具有一定的周期递推特性，所以接下来通过引入一个新的函数$\alpha$来写出一个递归形式的表示：
+\begin{equation}
+\alpha_t(s_t) = 
+	\begin{cases}
+		B(s_1, o_1) \pi(s_1) & \text{当 $t = 1$}\\
+		B(s_t, o_t) \sum_{s_{t - 1}} ... \sum_{s_{t - 2}} ... \pi(s_1) & \text{当 $2 \le t \le T$}
+	\end{cases}
+\end{equation}
+其实就是把式子（？？？）从后往前“截断”到$B(s_t, o_t)$为止的部分。按照定义，$\alpha_t(s_t)$具有如下递推性质：
+$$ \alpha_t(s_t) = B(s_t, o_t) \sum_{s_{t - 1}} A(s_{t - 1}, s_t) \alpha_{t - 1}(s_{t - 1}) \text{，当 $2 \le t \le T$} $$
+这样从算法实现的角度就可以不断迭代从$\alpha_1(s_1)$一直迭代算到$\alpha_T(s_T)$，然后再最后跨一步算$p(o | \lambda)$：
+$$ p(o | \lambda) = \sum_{s_T} \alpha_T(s_T) $$
+考察上述计算的复杂度，$t = 1$时不用计算，从$t = 2 \rightarrow T$共$T - 1$次迭代，每次迭代按照递归公式（？？？）其实是这样的一个矩阵运算（$\circ$表示阿玛达乘积Hadamard product，即逐位相乘）：
+$$ \boldvec{\alpha_t} = A^T \cdot \boldvec{\alpha_{t - 1}} \circ \boldvec{b(o_t)} $$
+其中，列向量$\boldvec{\alpha_t}$、$\boldvec{b(o_t)}$分别为：
+$$ \boldvec{\alpha_t} = [\alpha_t(S_1), \alpha_t(S_2), ... \alpha_t(S_N)]^T $$
+$$ \boldvec{b(o_t)} = [B(S_1, o_t), B(S_2, o_t), ... B(S_N, o_t)]^T $$
+故而每次迭代的复杂度是$O(N^2 + N)$，最后一次算$p(o | \lambda)$复杂度是$O(N)$，总的复杂度是$(T - 1) * O(N^2 + N) + O(N) = O(TN^2)$，比暴力算法的$O(TN^T)高不知道哪去了！\\
+刚刚是吧
 也可以从$s_T$开始，从后到前：
 \begin{equation}\begin{split}
 P(o | \lambda)
