@@ -17,13 +17,6 @@
 \usepackage{relsize} % 为了在cases环境中显示大的求和号、求积号
 
 % 数学定理环境
-% \usepackage{amsthm} % 为了\begin{proof}——数学证明环境，必须放在\newtheorem前面否则报错，貌似是因为同名命令冲突吧……
-% \newtheorem{definition}{定义}
-% \newtheorem{theorem}{定理}
-% \newtheorem{proposition}{命题}
-% \renewenvironment{proof}{{\noindent \textbf{证明}}}{\qed}
-% \usepackage{thmtools}
-
 \usepackage{amsthm, thmtools}\usepackage{nameref, hyperref, cleveref}\declaretheorem[name=定义, refname={定义, 定义}, Refname={定义, 定义}]{definition}\declaretheorem[name=定理, refname={定理, 定理}, Refname={定理, 定理}]{theorem}\declaretheorem[name=命题, refname={命题, 命题}, Refname={命题, 命题}]{proposition}
 \renewenvironment{proof}{{\noindent \textbf{证明}}}{}
 
@@ -136,17 +129,17 @@ b_{jk} & = P(o_t = O_k | s_t = S_j)\\
 
 现在，有了模型参数$ \lambda $，有了观察序列$ o = o_1 o_2 ... o_T $，我们可以先假设知道状态序列$ s = s_1 s_2 ... s_T $，可以容易写出条件概率$ P(o | s, \lambda) $和$ P(s | \lambda) $，由这两个条件概率可以写出$ P(o, s | \lambda) $：
 \begin{align}
-\begin{split}
+\begin{split}\label{P(o|s,lambda)}
 P(o | s, \lambda) 
 & = \prod_{t = 1}^T P(o_t | s, \lambda) = \prod_{t = 1}^T P(o_t | s_t, \lambda) = \prod_{t = 1}^T B(s_t, o_t)
 \end{split}
 \\
-\begin{split}
+\begin{split}\label{P(s|lambda)}
 P(s | \lambda) \quad
 & = P(s_1 | \lambda) \prod_{t = 2}^T P(s_t | s_{t - 1}, \lambda) = \pi(s_1) \prod_{t = 2}^T A(s_{t - 1}, s_t)
 \end{split}
 \\
-\begin{split}
+\begin{split}\label{P(o,s|lambda)}
 P(o, s | \lambda)
 & = P(o | s, \lambda) P(s | \lambda) = \pi(s_1) B(s_1, o_1) \prod_{t = 2}^T A(s_{t - 1}, s_t) B(s_t, o_t)
 \end{split}
@@ -345,9 +338,9 @@ HMM的参数训练一般是用Baum-Welch算法，只能保证得到局部最优�
 \subsubsection{凸函数}
 
 \begin{definition}\label{convex definition}
-$ f $是一个定义在区间$ I = [a, b] $上的实值函数，则称$ f $在$ I $上为\textbf{凸的(convex)}，如果$ \forall x_1, x_2 \in I, \lambda \in [0, 1], $
+$ f $是一个定义在区间$ I = [a, b] $上的实值函数，则称$ f $在$ I $上为\textbf{凸的(convex)}，如果$ \forall x_1, x_2 \in I, \mu \in [0, 1], $
 \begin{equation*}
-f(\lambda x_1 + (1 - \lambda) x_2) \le \lambda f(x_1) + (1 - \lambda) f(x_2)
+f(\mu x_1 + (1 - \mu) x_2) \le \mu f(x_1) + (1 - \mu) f(x_2)
 \end{equation*}
 上式严格不等时，称$ f $为\textbf{严格凸的(striclty convex)}。
 \end{definition}
@@ -377,9 +370,9 @@ $ －\ln(x) $在$ (0, \infty) $上严格凸。
 凸函数的定义可以从两个点扩展到$ n $个点，即 \nameref{n points convex} ：
 
 \begin{theorem}[Jensen不等式]\label{n points convex}
-令$ f $为定义在区间$ I $上的凸函数，若$ x_1, x_2, \ldots, x_n \in I $且$ \lambda_1, \lambda_2, \ldots, \lambda_n \ge 0 $且$ \sum_{i = 1}^n \lambda_i = 1 $，则有
+令$ f $为定义在区间$ I $上的凸函数，若$ x_1, x_2, \ldots, x_n \in I $且$ \mu_1, \mu_2, \ldots, \mu_n \ge 0 $且$ \sum_{i = 1}^n \mu_i = 1 $，则有
 \begin{equation*}
-f(\sum_{i = 1}^n \lambda_i x_i) \le \sum_{i = 1}^n \lambda_i f(x_i)
+f(\sum_{i = 1}^n \mu_i x_i) \le \sum_{i = 1}^n \mu_i f(x_i)
 \end{equation*}
 \end{theorem}
 
@@ -389,23 +382,169 @@ f(\sum_{i = 1}^n \lambda_i x_i) \le \sum_{i = 1}^n \lambda_i f(x_i)
 
 由于$ \ln(x) $是凹函数，由 \nameref{n points convex}可得：
 \begin{equation}\label{ln inequality}
-\ln(\sum_{i = 1}^n \lambda_i x_i) \ge \sum_{i = 1}^n \lambda_i \ln(x_i)
+\ln(\sum_{i = 1}^n \mu_i x_i) \ge \sum_{i = 1}^n \mu_i \ln(x_i)
 \end{equation}
 
-不等式\eqref{ln inequality}就是接下来推导EM算法的一个重要工具，它的意义在于可以提供一个求和式的对数的下界。
+不等式\eqref{ln inequality}就是接下来推导EM算法的一个重要工具，其意义在于：一方面，它可以提供一个求和式的对数的下界；另一方面，我们很难处理对“和式的对数”的求导，但是如果利用上式将其转化为“对数的和式”，则容易求导。这两点将在下一节具体体现。'
 
 \subsubsection{EM算法推导}
 
 为了方便后面直接应用，这里的推导直接使用HMM模型的符号。给定一组随机变量（也可以看作是一个随机向量）$ o = (o_1, o_2, \ldots, o_T) $， 我们希望找到一组模型参数$ \lambda $，使得这组参数产生着组随机变量的概率$ P(o | \lambda) $最大化，这个问题称为最大似然估计(maximum likelihood estimation, MLE)。一般来说不会直接最大化这个概率，而是最大化其对数，称之为对数似然函数(log likelihood function)：
-\begin{equation}
+\begin{equation}\label{log likelihood function}
 L(\lambda) = \ln P(o | \lambda)
 \end{equation}
-因为$ \ln(x) $是严格增函数，所以最大化$ L(\lambda) $与最大化$ P(o | \lambda) $是等价的。当无法直接通过求导的解析方法最大化$ L(\lambda) $时，EM算法就上场了，它的基本思想是通过迭代的方式不断更新参数$ \lambda $的取值，使得$ L(\lambda) $最终收敛到一个局部最大值。我们把上一次迭代的模型参数值记为$ \lambda' $，这次迭代的模型参数值记为$ \lambda $，把两次迭代得到的对数似然函数值的差距记为：
-\begin{equation}
-Q(\lambda | \lambda') = \ln P(o | \lambda) - \ln P(o | \lambda')
-\end{equation}
-$ Q(\lambda | \lambda') $在很多文献中被称为辅助函数(auxiliary function)。
+因为$ \ln(x) $是严格增函数，所以最大化$ L(\lambda) $与最大化$ P(o | \lambda) $是等价的。
 
+当无法直接通过求导的解析方法最大化$ L(\lambda) $时，EM算法就上场了，它的基本思想是通过迭代的方式不断更新参数$ \lambda $的取值，使得$ L(\lambda) $最终收敛到一个局部最大值。我们把上一次迭代的已定\textbf{参数值}记为$ \lambda' $，这次迭代的未定\textbf{参数变量}记为$ \lambda $，把两次迭代得到的对数似然函数值之差记为：
+\begin{equation}\label{D definition}
+D(\lambda) = \ln P(o | \lambda) - \ln P(o | \lambda')
+\end{equation}
+同时记最大化$ D(\lambda) $得到的已定\textbf{参数值}为
+\begin{equation}\label{lambda_0 definition}
+\lambda_0 = \argmax_{\lambda} D(\lambda)
+\end{equation}
+$ D(\lambda) $表示每次迭代给对数似然函数带来的增益，则有收敛条件：
+\begin{proposition}\label{converge condition}
+对于函数$ D(\lambda) $和迭代过程$ \lambda' \rightarrow \lambda $，如果满足：
+\begin{itemize}
+\item 当$ D'(\lambda') = 0 $时$ \lambda_0 = \lambda' $
+\item 当$D'(\lambda') \neq 0 $时$ \lambda_0 \neq \lambda' $且$ D(\lambda_0) > D(\lambda') $
+\end{itemize}
+则$ D(\lambda) $最终能收敛到局部最优值。
+\end{proposition}
+
+接下来讲按什么办法更新$ \lambda $可以确保以上两点。EM框架在$ o $之外引入了另一组隐含变量(latent variable)$ s $，对于具体的应用而言，这些隐含变量可以是“观察不到的量”，也可以是“残缺不全的量”，甚至可以是纯粹为了数学推导引入的“无意义的量”。具体到HMM，则是属于观察不到的量的情况。引入$ s $之后，似然函数写成：
+\begin{equation}
+P(o | \lambda) = \sum_s P(o, s | \lambda)
+\end{equation}
+代入\eqref{D definition}得：
+\begin{equation}
+D(\lambda) = \ln \sum_s P(o, s | \lambda) - \ln P(o | \lambda')
+\end{equation}
+
+这里就遇到了一个“和式的对数”，可以利用上一小节的结论\eqref{ln inequality}把它转化为“对数的和式”。问题在于，考虑到它是在$ s $上求和，则可以拿来当作系数$ \mu_i $的有四个：
+\begin{itemize}
+\item $ P(s | \lambda) $
+\item $ P(s | \lambda') $
+\item $ P(s | o, \lambda) $
+\item $ P(s | o, \lambda') $
+\end{itemize}
+它们都满足$ \mu_1, \mu_2, \ldots, \mu_n \ge 0 $且$ \sum_{i = 1}^n \mu_i = 1 $的限制。应该选哪一个作为系数$ \mu_i $呢？在这里还并不能明显看出哪个好，所以暂且用$ \mu_s $来代替，继续推导看看：
+\begin{equation}
+\begin{split}
+D(\lambda)
+& = \ln \sum_s \mu_s \frac{P(o, s | \lambda)}{\mu_s} - \ln P(o | \lambda')\\
+& \ge \sum_s \mu_s \ln \frac{P(o, s | \lambda)}{\mu_s} - \ln P(o | \lambda')\\
+& = \sum_s \mu_s \ln \frac{P(o, s | \lambda)}{\mu_s} - \sum_s \mu_s \ln P(o | \lambda')\\
+& = \sum_s \mu_s \ln \frac{P(o, s | \lambda)}{\mu_s P(o | \lambda')}
+\end{split}
+\end{equation}
+
+考虑到接下来很可能对上式的最后结果以$ \lambda $为变量求导，而$ \ln $部分是$ \lambda $的函数，那如果$ \mu_s $部分与$ \lambda $无关，就可以免去对两个关于$ \lambda $的函数的乘积求导的麻烦。这样就排除两个。剩下的$ P(s | \lambda') $和$ P(s | o, \lambda') $中，注意到后者可以同$ P(o | \lambda') $合并起来，使得分子分母具有相似的形式，所以最终还是选$ P(s | o, \lambda') $：
+\begin{equation}
+\begin{split}
+D(\lambda) 
+& \ge \sum_s P(s | o, \lambda') \ln \frac{P(o, s | \lambda)}{P(s | o, \lambda') P(o | \lambda')}\\
+& = \sum_s P(s | o, \lambda') \ln \frac{P(o, s | \lambda)}{P(o, s | \lambda')}\\
+& \stackrel{\text{记}}{=} Q(\lambda)
+\end{split}
+\end{equation}
+
+$ Q(\lambda) $是$ D(\lambda) $的下界，在很多文献中写作$ Q(\lambda | \lambda') $，称为辅助函数(auxiliary function)。其重要性在于，当$ P(o, s | \lambda) $满足一定条件时，通过最大化$ Q(\lambda) $，我们可以保证每次迭代满足上述$ D(\lambda) $的两个收敛条件，下面具体说明。
+
+\begin{proposition}\label{converge condition proof}
+若方程$ \frac{\partial P(o, s | \lambda)}{\partial \lambda} = 0 $有且只有一个解，令
+\begin{equation}
+\lambda_0 = \argmax_{\lambda} Q(\lambda)
+\end{equation}
+则
+\end{proposition}
+
+\section{第二个问题}
+
+回顾一下问题描述：已知一组模型参数$ \lambda = (A, B, \pi) $，给定一个观察序列一个观察序列$ o = o_1 o_2 ... o_T $，如何按照某种有意义的准则来找出一个状态序列$ s = s_1 s_2 ... s_T $，使之能够最好地“解释该观察序列的出现”？
+
+所谓最好地“解释观察序列的出现”，无非是最大化状态$ s $出现的概率，可以有两种准则：一是单独地最大化状态序列中每一个状态变量$ s_t $关于观察序列的条件概率，二是总体地最大化观察序列和整个状态序列$ s $的联合概率。前者对应前向－后向算法，后者对应维特比算法。
+
+\subsection{前向－后向算法}
+
+现在的目标是要单独最大化每一个状态变量$ s_t $的出现概率$ P(s_t | o, \lambda) $，利用第一个问题中的函数$ \alpha_t $、$ \alpha'_t $、$ \beta_t $、$ \beta'_t $有：
+\begin{equation}
+\begin{split}
+P(s_t | o, \lambda) P(o | \lambda)
+& = P(s_t, o | \lambda)\\
+& = P(o | s_t, \lambda) P(s_t | \lambda)\\
+& = P(o_1, \ldots, o_{t - 1} | s_t, \lambda) P(o_t | s_t, \lambda) P(o_{t + 1}, \ldots, o_T | s_t, \lambda) P(s_t | \lambda)\\
+& = P(o_1, \ldots, o_{t - 1}, s_t | \lambda) P(o_t | s_t, \lambda) P(o_{t + 1}, \ldots, o_T | s_t, \lambda)\\
+& = \alpha'(s_t) B(s_t, o_t) \beta'(s_t)\\
+& = \alpha(s_t) \beta'(s_t)\\
+& = \alpha'(s_t) \beta(s_t)\\
+& = \frac{\alpha(s_t) \beta(s_t)}{B(s_t, o_t)}
+\end{split}
+\end{equation}
+四种表示方式是一样的，下面以$ \alpha(s_t)\beta'(s_t) $为例。当所有$ t $上的$ \alpha(s_t)$和$ \beta'(s_t) $计算出来后，所有$ t $上的$ P(s_t | o, \lambda) P(o | \lambda) $很容易就计算出来了。又因为$ P(o | \lambda) $与$ s_t $无关，所以最佳的$ s_{t_{max}} $为：
+\begin{equation}
+\begin{split}
+s_{t_{max}}
+& = \argmax_{s_t} P(s_t | o, \lambda)\\
+& = \argmax_{s_t} P(s_t | o, \lambda) P(o | \lambda)\\
+& = \argmax_{s_t} \alpha(s_t) \beta'(s_t)
+\end{split}
+\end{equation}
+也就是在向量中选择最大元素对应的坐标。因为结合了前向和后向两个过程，所以这叫前向－后向算法。
+
+它的好处在于比下文的维特比算法简单，容易实现。然而考虑这种情况：相邻的两个状态变量$ s_t $和$ s_{t + 1} $求出来的状态值$ S_i $和$ S_j $出现转移概率为0的情况，即$ A(S_i, S_j)  = 0 $，这意味着算法最终给出的状态序列中出现了“不可能的转移”，以至于整个状态序列出现的概率根本就是0！当转移矩阵中存在0元素时，这种情况的确是有可能发生的。前向－后向算法不考虑状态变量之间的相互作用，此其缺陷。
+
+\subsection{维特比算法}
+
+当考虑联合概率$ P(o, s | \lambda) $时，我们希望得到：
+\begin{equation}
+\begin{split}
+s_{max}
+& = \argmax_s P(o, s | \lambda)\\
+& = \argmax_{s_1, \ldots, s_T} \pi(s_1) B(s_1, o_1) \prod_{t = 2}^T A(s_{t - 1}, s_t) B(s_t, o_t)
+\end{split}
+\end{equation}
+其中$ P(o, s | \lambda) $已在式子\eqref{P(o,s|lambda)}给出。上式在形式上与式子\eqref{P(o|lambda)}相似，同样地，直接求解需要在整个状态序列的可能空间中搜索，复杂度是随序列长度$ T $指数增长的，所以同样不能用暴力算法。
+
+在解决第一个问题的前向算法中，我们利用了加法的乘法分配律来减少重复计算，类似地，$ \max $运算也有乘法分配律：
+\begin{equation}
+\max_{x = 1}^N f(x, y)g(y) = g(y) \max_{x = 1}^N f(x, y)
+\end{equation}
+不断提取公因子之后，联合概率的最大值可以写为
+\begin{equation}
+\max_s P(o, s | \lambda) = \max_{s_T} B(s_T, o_T) \prod_{t = T - 1}^1 \max_{s_t} A(s_t, s_{t + 1}) B(s_t, o_t) \pi(s_1)
+\end{equation}
+与$ \alpha_t $类似，定义一组函数$ \delta_t $来表示“截断”到$ B(s_t, o_t) $左边的部分（简单起见，这里就不讨论“截断”到右边的方式了）：
+\begin{equation}\label{delta_t_definition}
+\delta_t(s_t) = 
+	\begin{cases}
+		B(s_1, o_1) \pi(s_1) & \text{当} t = 1\\
+		B(s_t, o_t) \mathlarger{\prod}_{u = t - 1}^1 \mathlarger{\max}_{s_u} A(s_u, s_{u + 1}) B(s_u, o_u) \pi(s_1) & \text{当} 2 \le t \le T
+	\end{cases}
+\end{equation}
+其满足递推关系：
+\begin{equation}\label{delta_t_recursive}
+\delta_t(s_t) = B(s_t, o_t) \max_{s_{t - 1}} A(s_{t - 1}, s_t) \delta_{t - 1}(s_{t - 1}) \quad \text{当} 2 \le t \le T
+\end{equation}
+最终得到联合概率最大值：
+\begin{equation}\label{delta_t_final_shot}
+\max_s P(o, s | \lambda) = \max_{s_T} \delta_T(s_T)
+\end{equation}
+
+然而我们的目标$ \max_s P(o, s | \lambda) $， 而是$ \argmax_s P(o, s | \lambda) $，因此引入另一组函数$ \psi_t $来“跟踪”每一步的$ s_t $取值：
+\begin{equation}\label{psi_t_definition}
+\psi_t(s_t) = 
+	\begin{cases}
+		0 & \text{当} t = 1\\
+		\mathlarger{\argmax}_{s_{t - 1}} A(s_{t - 1}, s_t) \delta_{t - 1}(s_{t - 1}) & \text{当} 2 \le t \le T
+	\end{cases}
+\end{equation}
+
+
+
+
+\section{总结}
 
 
 
