@@ -16,6 +16,17 @@
 \numberwithin{equation}{section}
 \usepackage{relsize} % 为了在cases环境中显示大的求和号、求积号
 
+% 数学定理环境
+% \usepackage{amsthm} % 为了\begin{proof}——数学证明环境，必须放在\newtheorem前面否则报错，貌似是因为同名命令冲突吧……
+% \newtheorem{definition}{定义}
+% \newtheorem{theorem}{定理}
+% \newtheorem{proposition}{命题}
+% \renewenvironment{proof}{{\noindent \textbf{证明}}}{\qed}
+% \usepackage{thmtools}
+
+\usepackage{amsthm, thmtools}\usepackage{nameref, hyperref, cleveref}\declaretheorem[name=定义, refname={定义, 定义}, Refname={定义, 定义}]{definition}\declaretheorem[name=定理, refname={定理, 定理}, Refname={定理, 定理}]{theorem}\declaretheorem[name=命题, refname={命题, 命题}, Refname={命题, 命题}]{proposition}
+\renewenvironment{proof}{{\noindent \textbf{证明}}}{}
+
 % 首行缩进
 \usepackage{indentfirst}
 \setlength\parindent{2em}
@@ -325,13 +336,76 @@ P(o | \lambda) & = \sum_{s_1} \pi(s_1) B(s_1, o_1) \beta'_t(s_1)
 
 \section{第三个问题}
 
-要求最优化参数$ \lambda_0 = \argmax_{\lambda} P(o | \lambda) $，这个问题本身其实是属于用最大似然法优化参数，至于用贝叶斯方法怎么优化参数，并不在本文的讨论范围内。最大似然法一般不直接优化似然函数，而是优化对数似然函数$ \log P(o | \lambda) $，然后对参数$ \lambda $	求导，令等于零，求解……但这在HMM上做不了，因为式子\eqref{P(o|lambda)}很难应用这种方法。事实上，目前并没有HMM参数优化问题的解析解。
+要求最优化参数$ \lambda_0 = \argmax_{\lambda} P(o | \lambda) $，这个问题本身其实是属于用最大似然估计优化参数，至于用贝叶斯方法怎么优化参数，并不在本文的讨论范围内。最大似然估计一般不直接优化似然函数，而是优化对数似然函数$ \log P(o | \lambda) $，然后对参数$ \lambda $	求导，令等于零，求解……但这在HMM上做不了，因为式子\eqref{P(o|lambda)}很难应用这种方法。事实上，目前并没有HMM参数优化问题的解析解。
 
 HMM的参数训练一般是用Baum-Welch算法，只能保证得到局部最优的参数。它其实就是通用的EM算法框架在HMM参数训练问题上的具体使用。接下来先介绍EM算法，再具体介绍Baum-Welch算法。
 
 \subsection{EM算法框架}
 
-Expectation Maximization(EM)算法是一个通用的算法框架，只有应用在像HMM参数训练这样的具体问题上时
+\subsubsection{凸函数}
+
+\begin{definition}\label{convex definition}
+$ f $是一个定义在区间$ I = [a, b] $上的实值函数，则称$ f $在$ I $上为\textbf{凸的(convex)}，如果$ \forall x_1, x_2 \in I, \lambda \in [0, 1], $
+\begin{equation*}
+f(\lambda x_1 + (1 - \lambda) x_2) \le \lambda f(x_1) + (1 - \lambda) f(x_2)
+\end{equation*}
+上式严格不等时，称$ f $为\textbf{严格凸的(striclty convex)}。
+\end{definition}
+
+直观来说，凸函数的图像落在从点$ (x_1, f(x_1)) $到点$ f(x_2, f(x_2)) $的线段下方（严格凸的），或者不越过该线段上方（凸的）。
+
+\begin{definition}\label{concave definition}
+称$ f $为\textbf{凹的(concave)}或\textbf{严格凹的(strictly concave)}，如果$ -f $是凸的或严格凸的。
+\end{definition}
+
+\begin{theorem}\label{convex theorem}
+若在$ [a, b] $上，$ f $二次可导且$ f''(x) \ge 0 $，则$ f $在$ [a, b] $上是凸的。
+\end{theorem}
+
+\begin{proof}
+略。
+\end{proof}
+
+\begin{proposition}\label{ln proposition}
+$ －\ln(x) $在$ (0, \infty) $上严格凸。
+\end{proposition}
+
+\begin{proof}
+令$ f(x) = -\ln(x) $，则有$ f''(x) = \frac{1}{x^2}, \quad \forall x \in (0, \infty) $。由\autoref{convex theorem} 可得$ -\ln(x) $严格凸。另，由\autoref{concave definition} 可得$ \ln(x) $在$ (0, \infty) $上严格凹。
+\end{proof}
+
+凸函数的定义可以从两个点扩展到$ n $个点，即 \nameref{n points convex} ：
+
+\begin{theorem}[Jensen不等式]\label{n points convex}
+令$ f $为定义在区间$ I $上的凸函数，若$ x_1, x_2, \ldots, x_n \in I $且$ \lambda_1, \lambda_2, \ldots, \lambda_n \ge 0 $且$ \sum_{i = 1}^n \lambda_i = 1 $，则有
+\begin{equation*}
+f(\sum_{i = 1}^n \lambda_i x_i) \le \sum_{i = 1}^n \lambda_i f(x_i)
+\end{equation*}
+\end{theorem}
+
+\begin{proof}
+数学归纳法，略。
+\end{proof}
+
+由于$ \ln(x) $是凹函数，由 \nameref{n points convex}可得：
+\begin{equation}\label{ln inequality}
+\ln(\sum_{i = 1}^n \lambda_i x_i) \ge \sum_{i = 1}^n \lambda_i \ln(x_i)
+\end{equation}
+
+不等式\eqref{ln inequality}就是接下来推导EM算法的一个重要工具，它的意义在于可以提供一个求和式的对数的下界。
+
+\subsubsection{EM算法推导}
+
+为了方便后面直接应用，这里的推导直接使用HMM模型的符号。给定一组随机变量（也可以看作是一个随机向量）$ o = (o_1, o_2, \ldots, o_T) $， 我们希望找到一组模型参数$ \lambda $，使得这组参数产生着组随机变量的概率$ P(o | \lambda) $最大化，这个问题称为最大似然估计(maximum likelihood estimation, MLE)。一般来说不会直接最大化这个概率，而是最大化其对数，称之为对数似然函数(log likelihood function)：
+\begin{equation}
+L(\lambda) = \ln P(o | \lambda)
+\end{equation}
+因为$ \ln(x) $是严格增函数，所以最大化$ L(\lambda) $与最大化$ P(o | \lambda) $是等价的。当无法直接通过求导的解析方法最大化$ L(\lambda) $时，EM算法就上场了，它的基本思想是通过迭代的方式不断更新参数$ \lambda $的取值，使得$ L(\lambda) $最终收敛到一个局部最大值。我们把上一次迭代的模型参数值记为$ \lambda' $，这次迭代的模型参数值记为$ \lambda $，把两次迭代得到的对数似然函数值的差距记为：
+\begin{equation}
+Q(\lambda | \lambda') = \ln P(o | \lambda) - \ln P(o | \lambda')
+\end{equation}
+$ Q(\lambda | \lambda') $在很多文献中被称为辅助函数(auxiliary function)。
+
 
 
 
