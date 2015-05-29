@@ -515,34 +515,50 @@ s_{max}
 \begin{equation}
 \max_s P(o, s | \lambda) = \max_{s_T} B(s_T, o_T) \prod_{t = T - 1}^1 \max_{s_t} A(s_t, s_{t + 1}) B(s_t, o_t) \pi(s_1)
 \end{equation}
-与$ \alpha_t $类似，定义一组函数$ \delta_t $来表示“截断”到$ B(s_t, o_t) $左边的部分（简单起见，这里就不讨论“截断”到右边的方式了）：
-\begin{equation}\label{delta_t_definition}
-\delta_t(s_t) = 
+与$ \alpha_t $类似，定义一组函数$ \delta_t $来表示“截断”到$ B(s_t, o_t) $左边（简单起见，这里就不讨论“截断”到右边的方式了）的部分，然后得到其递推关系、迭代终止操作、概率意义：
+\begin{align}
+\label{delta_t_definition}
+\delta_t(s_t) & = 
 	\begin{cases}
 		B(s_1, o_1) \pi(s_1) & \text{当} t = 1\\
 		B(s_t, o_t) \mathlarger{\prod}_{u = t - 1}^1 \mathlarger{\max}_{s_u} A(s_u, s_{u + 1}) B(s_u, o_u) \pi(s_1) & \text{当} 2 \le t \le T
 	\end{cases}
-\end{equation}
-其满足递推关系：
-\begin{equation}\label{delta_t_recursive}
-\delta_t(s_t) = B(s_t, o_t) \max_{s_{t - 1}} A(s_{t - 1}, s_t) \delta_{t - 1}(s_{t - 1}) \quad \text{当} 2 \le t \le T
-\end{equation}
-最终得到联合概率最大值：
-\begin{equation}\label{delta_t_final_shot}
-\max_s P(o, s | \lambda) = \max_{s_T} \delta_T(s_T)
-\end{equation}
+\\
+\label{delta_t_recursive}
+\delta_t(s_t) & = B(s_t, o_t) \max_{s_{t - 1}} A(s_{t - 1}, s_t) \delta_{t - 1}(s_{t - 1}) \quad \text{当} 2 \le t \le T
+\\
+\label{delta_t_final_shot}
+\max_s P(o, s | \lambda) & = \max_{s_T} \delta_T(s_T)
+\\
+\label{delta_p_relation}
+\delta_t(s_t) & =
+	\begin{cases}
+		P(o_1, s_1 | \lambda) & \text{当} t = 1\\
+		\mathlarger{\max}_{s_1, \ldots, s_{t - 1}} P(o_1, \ldots, o_t, s_1, \ldots, s_t | \lambda) & \text{当} 2 \le t \le T
+	\end{cases}
+\end{align}
 
-然而我们的目标$ \max_s P(o, s | \lambda) $， 而是$ \argmax_s P(o, s | \lambda) $，因此引入另一组函数$ \psi_t $来“跟踪”每一步的$ s_t $取值：
-\begin{equation}\label{psi_t_definition}
-\psi_t(s_t) = 
+然而我们的目标$ \max_s P(o, s | \lambda) $， 而是$ \argmax_s P(o, s | \lambda) $。注意到当所有$ \delta_t(s_t) $计算出来后，能够直接确定的一个最大值是排在最后的$ s_T $：
+\begin{equation}\label{s_T_max}
+\begin{split}
+s_{T_{max}}
+& = \argmax_{s_T} \max_{s_1, \ldots, s_{T - 1}} P(o, s | \lambda)\\
+& = \argmax_{s_T} \delta_T(s_T)
+\end{split}
+\end{equation}
+如果能够根据下一个$ s_{t_{max}} $知道上一个$ s_{t - 1_{max}} $，就可以从$ s_{T_{max}} $一直往前递推出整个状态序列。因此引入另一组函数$ \psi_t $来“跟踪”每一步的$ s_{t - 1} $取值是如何由下一个$ s_t $决定的：
+\begin{align}
+\label{psi_t_definition}
+\psi_t(s_t) & = 
 	\begin{cases}
 		0 & \text{当} t = 1\\
 		\mathlarger{\argmax}_{s_{t - 1}} A(s_{t - 1}, s_t) \delta_{t - 1}(s_{t - 1}) & \text{当} 2 \le t \le T
 	\end{cases}
-\end{equation}
-
-
-
+\\
+\label{psi_t recursive}
+\psi_t(s_{t_{max}}) & = s_{t - 1_{max}}
+\end{align}
+根据递推关系\eqref{psi_t recursive}就能从\eqref{s_T_max}出发往前递推出整个状态序列$ s_{max} $。
 
 \section{总结}
 
